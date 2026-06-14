@@ -4,10 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Daily Tracker</title>
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
-<link rel="icon" href="favicon.ico" sizes="any">
-<link rel="apple-touch-icon" href="favicon-180.png">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CiAgPGRlZnM+CiAgICA8cmFkaWFsR3JhZGllbnQgaWQ9ImciIGN4PSIzNSUiIGN5PSIzMCUiIHI9IjgwJSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiM0ZGZmOTUiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMzRkMTdhIi8+CiAgICA8L3JhZGlhbEdyYWRpZW50PgogIDwvZGVmcz4KICA8Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMCIgZmlsbD0idXJsKCNnKSIvPgogIDx0ZXh0IHg9IjMyIiB5PSIzMyIgZm9udC1mYW1pbHk9IidTcGFjZSBHcm90ZXNrJywgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iNDAiIGZvbnQtd2VpZ2h0PSI3MDAiCiAgICAgICAgZmlsbD0iIzA0MTUwYiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZG9taW5hbnQtYmFzZWxpbmU9ImNlbnRyYWwiPkY8L3RleHQ+Cjwvc3ZnPg==">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;450;500;600&display=swap');
 
@@ -108,6 +105,7 @@
     transition:border-color .2s, background .2s;
   }
   .task.running{border-color:var(--green-dim);box-shadow:0 0 0 1px var(--green-glow), 0 0 24px var(--green-glow)}
+  .task.paused{border-color:var(--amber);box-shadow:0 0 0 1px rgba(232,176,75,.12)}
   .task.done{opacity:.55}
   .check{
     width:24px;height:24px;flex-shrink:0;border:1.5px solid var(--green-dim);border-radius:7px;
@@ -115,12 +113,14 @@
   }
   .task.done .check{background:var(--green);color:#04150b;border-color:var(--green)}
   .task.running .check{border-color:var(--green);border-style:dashed;color:var(--green)}
+  .task.paused .check{border-color:var(--amber);border-style:dashed;color:var(--amber)}
   .t-name{flex:1;font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:500;line-height:1.25}
   .task.done .t-name{text-decoration:line-through;text-decoration-color:var(--green-dim);color:var(--text-2)}
   .t-time{
     font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--green);
     min-width:74px;text-align:right;font-weight:500;font-variant-numeric:tabular-nums;
   }
+  .task.paused .t-time{color:var(--amber)}
   .t-actions{display:flex;gap:6px}
   .mini{
     font-size:11px;letter-spacing:.04em;padding:8px 13px;border:1px solid var(--line);
@@ -129,6 +129,10 @@
   .mini:hover{border-color:var(--text-2);color:var(--text)}
   .mini.start{color:var(--green);border-color:var(--green-dim)}
   .mini.start:hover{background:var(--green);color:#04150b;border-color:var(--green)}
+  .mini.resume{color:var(--green);border-color:var(--green-dim)}
+  .mini.resume:hover{background:var(--green);color:#04150b;border-color:var(--green)}
+  .mini.pause{color:var(--amber);border-color:#574212}
+  .mini.pause:hover{background:var(--amber);color:#1a1304;border-color:var(--amber)}
   .mini.done-btn{color:var(--green-bright);border-color:var(--green-dim)}
   .mini.done-btn:hover{background:var(--green);color:#04150b;border-color:var(--green)}
   .mini.del{padding:8px 11px}
@@ -139,27 +143,39 @@
     background:linear-gradient(135deg,var(--panel-2),var(--bg-2));
     border:1px solid var(--green-dim);border-radius:12px;padding:20px 24px;margin-bottom:26px;
     box-shadow:0 0 30px var(--green-glow);position:relative;overflow:hidden;
+    transition:border-color .25s, box-shadow .25s;
   }
   .timer-banner.on{display:flex}
+  .timer-banner.paused{border-color:var(--amber);box-shadow:0 0 30px rgba(232,176,75,.14)}
   .timer-banner::before{
     content:'';position:absolute;inset:0;
     background:radial-gradient(circle at 0% 50%, var(--green-glow), transparent 60%);pointer-events:none;
+    transition:background .25s;
+  }
+  .timer-banner.paused::before{
+    background:radial-gradient(circle at 0% 50%, rgba(232,176,75,.12), transparent 60%);
   }
   .timer-clock{
     font-family:'JetBrains Mono',monospace;font-size:clamp(28px,6vw,42px);font-weight:600;
     color:var(--green-bright);letter-spacing:.02em;font-variant-numeric:tabular-nums;
-    text-shadow:0 0 20px var(--green-glow);z-index:1;
+    text-shadow:0 0 20px var(--green-glow);z-index:1;transition:color .25s;
   }
+  .timer-banner.paused .timer-clock{color:var(--amber);text-shadow:0 0 20px rgba(232,176,75,.18)}
   .timer-meta{flex:1;min-width:0;z-index:1}
   .timer-meta .lbl{
     font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.22em;
-    text-transform:uppercase;color:var(--green);margin-bottom:3px;
+    text-transform:uppercase;color:var(--green);margin-bottom:3px;transition:color .25s;
   }
+  .timer-banner.paused .timer-meta .lbl{color:var(--amber)}
   .timer-meta .nm{
     font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:500;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
-  .timer-banner .mini.done-btn{z-index:1;background:var(--green);color:#04150b;border-color:var(--green);padding:10px 18px}
+  .timer-actions{display:flex;gap:8px;z-index:1;flex-shrink:0}
+  .timer-banner .mini{padding:10px 16px}
+  .timer-banner .mini.pause{background:transparent}
+  .timer-banner .mini.resume{background:transparent}
+  .timer-banner .mini.done-btn{background:var(--green);color:#04150b;border-color:var(--green);padding:10px 18px}
   .timer-banner .mini.done-btn:hover{background:var(--green-bright)}
 
   .out-card{
@@ -224,6 +240,8 @@
     .task{flex-wrap:wrap}
     .t-actions{width:100%;justify-content:flex-end}
     .btn-add{padding:0 18px}
+    .timer-banner{flex-wrap:wrap}
+    .timer-actions{width:100%;justify-content:flex-end}
   }
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -251,10 +269,13 @@
   <div class="timer-banner" id="timerBanner">
     <div class="timer-clock" id="bannerClock">00:00:00</div>
     <div class="timer-meta">
-      <div class="lbl">Running</div>
+      <div class="lbl" id="bannerLbl">Running</div>
       <div class="nm" id="bannerName">—</div>
     </div>
-    <button class="mini done-btn" id="bannerDone">DONE ✓</button>
+    <div class="timer-actions">
+      <button class="mini pause" id="bannerPause">⏸ PAUSE</button>
+      <button class="mini done-btn" id="bannerDone">DONE ✓</button>
+    </div>
   </div>
 
   <section>
@@ -336,6 +357,24 @@
     t.status='running'; t.startedAt=Date.now(); runningId=id;
     tick(); tickHandle=setInterval(tick,1000); render();
   }
+
+  function pauseTask(id){
+    const t=tasks.find(x=>x.id===id);
+    if(!t||t.status!=='running') return;
+    if(t.startedAt){ t.elapsed+=Math.floor((Date.now()-t.startedAt)/1000); t.startedAt=null; }
+    t.status='paused';
+    if(runningId===id){ clearInterval(tickHandle); tickHandle=null; runningId=null; }
+    render();
+  }
+
+  function resumeTask(id){
+    if(runningId!==null) stopTask(runningId,false);
+    const t=tasks.find(x=>x.id===id);
+    if(!t||t.status==='done') return;
+    t.status='running'; t.startedAt=Date.now(); runningId=id;
+    tick(); tickHandle=setInterval(tick,1000); render();
+  }
+
   function tick(){
     const t=tasks.find(x=>x.id===runningId);
     if(!t) return;
@@ -344,6 +383,7 @@
     const row=document.querySelector('[data-time="'+t.id+'"]');
     if(row) row.textContent=hms(live);
   }
+
   function stopTask(id,markDone){
     const t=tasks.find(x=>x.id===id);
     if(!t) return;
@@ -352,13 +392,33 @@
     t.status=markDone?'done':'todo';
     render();
   }
+
+  $("#bannerPause").addEventListener('click',()=>{
+    if(runningId!==null) pauseTask(runningId);
+  });
   $("#bannerDone").addEventListener('click',()=>{if(runningId!==null)stopTask(runningId,true);});
 
   function render(){
-    if(runningId!==null){
-      const t=tasks.find(x=>x.id===runningId);
-      banner.classList.add('on'); $("#bannerName").textContent=t.name;
-    } else banner.classList.remove('on');
+    // Banner: show whenever a task is running OR paused
+    const activeT = tasks.find(x=>x.status==='running') || tasks.find(x=>x.status==='paused');
+    if(activeT){
+      banner.classList.add('on');
+      $("#bannerName").textContent=activeT.name;
+      if(activeT.status==='paused'){
+        banner.classList.add('paused');
+        $("#bannerLbl").textContent='Paused';
+        $("#bannerClock").textContent=hms(activeT.elapsed);
+        $("#bannerPause").className='mini resume';
+        $("#bannerPause").textContent='▶ RESUME';
+      } else {
+        banner.classList.remove('paused');
+        $("#bannerLbl").textContent='Running';
+        $("#bannerPause").className='mini pause';
+        $("#bannerPause").textContent='⏸ PAUSE';
+      }
+    } else {
+      banner.classList.remove('on','paused');
+    }
 
     if(tasks.length===0){
       taskList.innerHTML='<p class="empty">No tasks yet. Add one above to get started.</p>';
@@ -378,8 +438,15 @@
           act.querySelector('.start').addEventListener('click',()=>startTask(t.id));
           act.querySelector('.del').addEventListener('click',()=>{tasks.splice(tasks.indexOf(t),1);render();});
         } else if(t.status==='running'){
-          act.innerHTML='<button class="mini done-btn">DONE ✓</button>';
+          act.innerHTML='<button class="mini pause">⏸ PAUSE</button><button class="mini done-btn">DONE ✓</button>';
+          act.querySelector('.pause').addEventListener('click',()=>pauseTask(t.id));
           act.querySelector('.done-btn').addEventListener('click',()=>stopTask(t.id,true));
+        } else if(t.status==='paused'){
+          chk.addEventListener('click',()=>resumeTask(t.id));
+          act.innerHTML='<button class="mini resume">▶ RESUME</button><button class="mini done-btn">DONE ✓</button><button class="mini del">✕</button>';
+          act.querySelector('.resume').addEventListener('click',()=>resumeTask(t.id));
+          act.querySelector('.done-btn').addEventListener('click',()=>stopTask(t.id,true));
+          act.querySelector('.del').addEventListener('click',()=>{tasks.splice(tasks.indexOf(t),1);render();});
         } else {
           chk.addEventListener('click',()=>{t.status='todo';render();});
           act.innerHTML='<button class="mini del">✕</button>';
@@ -450,7 +517,7 @@
     r+='PENDING ('+pending.length+' tasks)\n';
     if(pending.length){
       pending.forEach((t,i)=>{
-        const st=t.status==='running'?'in progress':'not started';
+        const st=t.status==='running'?'in progress':(t.status==='paused'?'paused':'not started');
         const sp=t.elapsed>0?'  ('+human(t.elapsed)+' logged)':'';
         r+='\n'+(i+1)+'. '+t.name+' - '+st+sp+'\n';
       });
